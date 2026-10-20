@@ -1,0 +1,117 @@
+{
+  "generatedAt": "2026-10-20T00:55:26.798Z",
+  "license": "HYG/OpenNGC-derived catalogue portions are CC BY-SA 4.0; code is separately licensed.",
+  "notes": [
+    "Coordinates and radii are rounded. Solar orbital phases are schematic, not date-specific ephemerides.",
+    "Exoplanets use host-system coordinates; no orbital orientation is invented.",
+    "Large-scale structures use approximate representative centres and extents.",
+    "Curated black-hole distances are approximate system anchors, not precision astrometry."
+  ],
+  "sources": [
+    {
+      "id": "abell",
+      "name": "Measured Redshifts of Abell Clusters — CDS VII/165A",
+      "url": "https://heasarc.gsfc.nasa.gov/W3Browse/all/abellzcat.html",
+      "downloadUrl": "https://cdsarc.cds.unistra.fr/ftp/cats/VII/165A/catalog.dat",
+      "license": "Public scientific catalogue; source acknowledgement retained",
+      "attribution": "H. Andernach (1991), ASP Conf. Ser. 15, 279; Abell, Corwin & Olowin (1989); CDS VII/165A. Only unflagged measured redshifts selected.",
+      "snapshotSha256": "fceb7fbf11c27d33a1017f04fc778ac53334aa71af2ea0dd6b3b77b9ace07bb2",
+      "snapshotEntries": 64,
+      "retrievedAt": "2026-10-19T06:16:19.671Z"
+    },
+    {
+      "id": "hyg",
+      "name": "HYG Stellar Database v4.1",
+      "url": "https://github.com/astronexus/HYG-Database",
+      "license": "CC BY-SA 4.0",
+      "attribution": "David Nash / Astronexus; Hipparcos, Yale Bright Star and Gliese catalogues",
+      "downloadUrl": "https://raw.githubusercontent.com/astronexus/HYG-Database/main/hyg/CURRENT/hygdata_v41.csv",
+      "snapshotSha256": "2e3628624229c188a0dfef95d1d7acc48b0cf4b9adbfa970a5091e4d749831a4",
+      "snapshotEntries": 350,
+      "retrievedAt": "2026-10-19T02:15:00.296Z"
+    },
+    {
+      "id": "nasa-exo",
+      "name": "NASA Exoplanet Archive — PSCompPars",
+      "url": "https://exoplanetarchive.ipac.caltech.edu/docs/TAP/usingTAP.html",
+      "license": "Public scientific data; archive acknowledgement and upstream references retained",
+      "attribution": "NASA Exoplanet Archive, operated by Caltech under contract with NASA; DOI 10.26133/NEA13",
+      "downloadUrl": "https://exoplanetarchive.ipac.caltech.edu/TAP/sync?query=select+pl_name%2Chostname%2Cra%2Cdec%2Csy_dist%2Cpl_rade%2Cpl_bmasse%2Cpl_orbper%2Cpl_orbsmax%2Cdisc_year%2Cdiscoverymethod+from+pscomppars+where+sy_dist+is+not+null+order+by+pl_name&format=json",
+      "snapshotSha256": "c3d72a03fe24ee7d7fb09f9e7f0b975ff8fc20137e804d6a83eeb841ace76efc",
+      "snapshotEntries": 280,
+      "retrievedAt": "2026-10-19T02:15:00.296Z"
+    },
+    {
+      "id": "openngc",
+      "name": "OpenNGC",
+      "url": "https://github.com/mattiaverga/OpenNGC",
+      "license": "CC BY-SA 4.0",
+      "attribution": "Mattia Verga; upstream NASA/IPAC NED (JPL/Caltech under NASA contract), HyperLEDA, SIMBAD (CDS Strasbourg)",
+      "downloadUrl": "https://raw.githubusercontent.com/mattiaverga/OpenNGC/master/database_files/NGC.csv",
+      "snapshotSha256": "9c86c2ab9ab1a124179c097b3ff610164095fb4ee8ecacca2cbf3f5d5c453f64",
+      "snapshotEntries": 512,
+      "retrievedAt": "2026-10-19T02:15:00.296Z"
+    },
+    {
+      "id": "nasa-solar",
+      "name": "NASA Solar System facts",
+      "url": "https://science.nasa.gov/solar-system/solar-system-facts/",
+      "license": "NASA public information; third-party content excluded",
+      "attribution": "NASA Science; rounded radii and semi-major axes, schematic orbital phases"
+    },
+    {
+      "id": "simbad",
+      "name": "SIMBAD astronomical database",
+      "url": "https://simbad.cds.unistra.fr/simbad/",
+      "license": "Scientific facts, with acknowledgement",
+      "attribution": "SIMBAD database, operated at CDS, Strasbourg, France; rounded representative sky anchors"
+    },
+    {
+      "id": "eht",
+      "name": "Event Horizon Telescope",
+      "url": "https://eventhorizontelescope.org/press-release-may-12-2022",
+      "license": "Factual summaries rewritten; no imagery copied",
+      "attribution": "Event Horizon Telescope Collaboration"
+    },
+    {
+      "id": "bh",
+      "name": "Black-hole systems — NASA / ESO / scientific literature",
+      "url": "https://science.nasa.gov/universe/black-holes/",
+      "license": "Factual summaries rewritten; no media copied",
+      "attribution": "NASA Science; positions and distances are approximate system anchors",
+      "references": [
+        "https://www.eso.org/public/news/eso2408/",
+        "https://www.eso.org/public/news/eso2117/",
+        "https://arxiv.org/abs/1510.08869",
+        "https://arxiv.org/abs/2209.14385",
+        "https://arxiv.org/abs/2302.07880"
+      ]
+    },
+    {
+      "id": "structures",
+      "name": "Large-scale structure literature / NASA NED",
+      "url": "https://ned.ipac.caltech.edu/",
+      "license": "Factual summaries rewritten; schematic centres and extents",
+      "attribution": "NASA/IPAC NED; Böhringer et al. 2025, A&A 695 A59; Tully et al. 2014 Nature 513, 71; representative centres are approximate",
+      "references": [
+        "https://www.aanda.org/articles/aa/pdf/2025/03/aa53582-24.pdf",
+        "https://arxiv.org/abs/1409.0880",
+        "https://arxiv.org/abs/2007.04414"
+      ]
+    },
+    {
+      "id": "cosmology",
+      "name": "Planck 2018 cosmological parameters",
+      "url": "https://arxiv.org/abs/1807.06209",
+      "license": "Factual parameters",
+      "attribution": "Planck Collaboration; flat ΛCDM, H0=67.4 km/s/Mpc, Ωm=0.315, ΩΛ=0.685"
+    },
+    {
+      "id": "earth-texture",
+      "name": "NASA Blue Marble via WebGL Earth",
+      "url": "https://github.com/turban/webgl-earth",
+      "license": "NASA Blue Marble public-domain imagery; repository attribution retained",
+      "attribution": "NASA / Reto Stöckli; WebGL Earth texture mirror; used only for Earth surface"
+    }
+  ]
+}
