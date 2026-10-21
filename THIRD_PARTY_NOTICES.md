@@ -4,6 +4,12 @@ Original source code, documentation, generated visual assets and the ten procedu
 
 The Lenteyyy logo is a project identity mark supplied by Lenteyyy. Its inclusion identifies this project and does not grant rights to impersonate Lenteyyy or use the mark as another project's branding. Logo rights are reserved by its owner.
 
+## Paper Shaders
+
+`@paper-design/shaders` 0.0.82, Copyright 2026 Paper. Source: https://github.com/paper-design/shaders ; documentation: https://shaders.paper.design/ . Licensed under Apache-2.0; the upstream license and notice are preserved in `LICENSES/Paper-Shaders-Apache-2.0.txt` and `LICENSES/Paper-Shaders-NOTICE.txt`.
+
+`src/engine/paper-background.ts` adapts the exported Perlin Noise and Warp GLSL programs for Three.js RawShaderMaterial, replacing the version directive and adjusting coordinates for nebula scale and seamless radial travel. These adaptations are identified here; the original upstream notice remains intact. No Paper ShaderMount or separate WebGL context is created.
+
 ## Astronomical catalogue
 
 `public/data/universe-catalog.json` is an adapted compilation released under CC BY-SA 4.0. HYG and OpenNGC snapshots retain that same license. A copy is in `LICENSES/CC-BY-SA-4.0.txt`; individual sources, retrieval dates, snapshot hashes and entry counts are in `public/data/sources.json`. Changes include selection, unit/frame conversion, approximate cosmological distances and rewritten bilingual descriptions. This does not license source code under CC BY-SA or imply source endorsement.

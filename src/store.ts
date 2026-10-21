@@ -40,6 +40,7 @@ interface GameState {
   keyboardMode: boolean;
   lang: 'zh' | 'en';
   quality: 'high' | 'low';
+  pauseAnimations: boolean;
   muted: boolean;
   musicEnabled: boolean;
   musicVolume: number;
@@ -77,7 +78,8 @@ export const useGame = create<GameState>((set, get) => ({
   panel: null,
   keyboardMode: false,
   lang: preferences.lang as 'zh' | 'en',
-  quality: 'high',
+  quality: preferences.quality as 'high' | 'low',
+  pauseAnimations: preferences.pauseAnimations,
   muted: preferences.muted,
   musicEnabled: preferences.musicEnabled,
   musicVolume: preferences.musicVolume,
@@ -103,6 +105,8 @@ export const useGame = create<GameState>((set, get) => ({
     set(s);
     const fields = {
       lang: 'cosmos-lang',
+      quality: 'cosmos-quality',
+      pauseAnimations: 'cosmos-pause-animations',
       muted: 'cosmos-muted',
       musicEnabled: 'cosmos-music',
       musicVolume: 'cosmos-music-volume',
@@ -352,6 +356,12 @@ export const universe = {
   triangles: 0,
   particleCount: 0,
   effectIntensity: 0,
+  renderFrames: 0,
+  shaderFrames: 0,
+  shaderPixels: 0,
+  motionActive: false,
+  adaptiveDpr: 1.2,
+  effectsReduced: false,
   travelled: 0,
   band: 0,
   elapsed: 0,

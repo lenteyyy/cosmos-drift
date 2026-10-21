@@ -5,11 +5,15 @@ import { fileURLToPath } from 'node:url';
 import { createConnection } from 'node:net';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
+const portArg = process.argv.indexOf('--port');
+const port = Number(portArg >= 0 ? process.argv[portArg + 1] : process.env.COSMOS_PORT || 5173);
+if (!Number.isInteger(port) || port < 1024 || port > 65535)
+  throw Error('端口必须是1024至65535的整数。');
 const runtime = new URL('../.runtime/', import.meta.url),
-  pidFile = new URL('server.json', runtime),
-  lock = new URL('start.lock', runtime);
+  pidFile = new URL(`server-${port}.json`, runtime),
+  lock = new URL(`start-${port}.lock`, runtime);
 const instance = createHash('sha256').update(root).digest('hex').slice(0, 16);
-const url = 'http://127.0.0.1:5173';
+const url = `http://127.0.0.1:${port}`;
 const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 async function health() {
   try {
@@ -22,7 +26,7 @@ async function health() {
 }
 async function occupied() {
   return new Promise((resolve) => {
-    const socket = createConnection({ host: '127.0.0.1', port: 5173 });
+    const socket = createConnection({ host: '127.0.0.1', port });
     const finish = (value) => {
       socket.destroy();
       resolve(value);
@@ -54,8 +58,8 @@ async function start() {
   }
   if (!acquired) throw Error('另一次启动尚未完成，请稍后重试。');
   try {
-    if (await occupied()) throw Error('5173 端口由其他服务占用；未停止或覆盖该服务。');
-    const log = await open(new URL('server.log', runtime), 'a');
+    if (await occupied()) throw Error(`${port} 端口由其他服务占用；未停止或覆盖该服务。`);
+    const log = await open(new URL(`server-${port}.log`, runtime), 'a');
     const child = spawn(
       process.execPath,
       [
@@ -63,7 +67,7 @@ async function start() {
         '--host',
         '127.0.0.1',
         '--port',
-        '5173',
+        String(port),
         '--strictPort',
       ],
       {
@@ -88,14 +92,14 @@ async function start() {
           JSON.stringify({ pid: running.pid, instance, startedAt: new Date().toISOString() }),
         );
         console.log(
-          `COSMOS DRIFT 已启动：${url}/\n关闭启动窗口不会停止游戏；停止服务请运行 npm stop。`,
+          `COSMOS DRIFT 已启动：${url}/\n关闭启动窗口不会停止游戏；停止服务请运行 npm stop -- --port ${port}。`,
         );
         return;
       }
       if (child.exitCode !== null) break;
       await pause(100);
     }
-    throw Error('服务未就绪，请查看 .runtime/server.log。');
+    throw Error(`服务未就绪，请查看 .runtime/server-${port}.log。`);
   } finally {
     await rmdir(lock).catch(() => {});
   }
@@ -120,7 +124,7 @@ async function stop() {
     }
     await pause(100);
   }
-  throw Error('服务尚未停止，请查看 .runtime/server.log。');
+  throw Error(`服务尚未停止，请查看 .runtime/server-${port}.log。`);
 }
 try {
   const command = process.argv[2] || 'start';
@@ -133,7 +137,7 @@ try {
     const running = await health();
     console.log(running ? `COSMOS DRIFT 在线：${url}/` : 'COSMOS DRIFT 离线');
     process.exitCode = running ? 0 : 1;
-  } else throw Error('用法：node scripts/server.mjs start|stop|restart|status');
+  } else throw Error('用法：node scripts/server.mjs start|stop|restart|status [--port 5174]');
 } catch (error) {
   console.error(error.message);
   process.exitCode = 1;

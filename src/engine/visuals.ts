@@ -3,7 +3,9 @@ const sphere = new T.SphereGeometry(1, 48, 32),
   lowSphere = new T.SphereGeometry(1, 16, 10);
 const vertex = `varying vec3 n;varying vec3 v;varying vec2 uv0;varying vec3 p;void main(){uv0=uv;p=position;n=normalize(normalMatrix*normal);vec4 mv=modelViewMatrix*vec4(position,1.);v=normalize(-mv.xyz);gl_Position=projectionMatrix*mv;}`;
 const noise = `float hash(vec3 p){return fract(sin(dot(p,vec3(127.1,311.7,74.7)))*43758.5453);}float noise(vec3 p){vec3 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(mix(hash(i),hash(i+vec3(1,0,0)),f.x),mix(hash(i+vec3(0,1,0)),hash(i+vec3(1,1,0)),f.x),f.y),mix(mix(hash(i+vec3(0,0,1)),hash(i+vec3(1,0,1)),f.x),mix(hash(i+vec3(0,1,1)),hash(i+vec3(1,1,1)),f.x),f.y),f.z);}float fbm(vec3 p){return noise(p)*.55+noise(p*2.1)*.27+noise(p*4.2)*.13+noise(p*8.3)*.05;}`;
-const earthTexture = new T.TextureLoader().load('/textures/earth.jpg');
+const earthTexture = new T.TextureLoader().load('/textures/earth.jpg', () => {
+  window.dispatchEvent(new Event('cosmos-assets-change'));
+});
 earthTexture.colorSpace = T.SRGBColorSpace;
 earthTexture.anisotropy = 4;
 const earthMat = new T.ShaderMaterial({

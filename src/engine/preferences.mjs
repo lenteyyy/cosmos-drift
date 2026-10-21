@@ -1,5 +1,7 @@
 const defaults = {
   lang: 'zh',
+  quality: 'high',
+  pauseAnimations: false,
   muted: false,
   musicEnabled: true,
   musicVolume: 0.45,
@@ -13,6 +15,8 @@ const defaults = {
 };
 const keys = {
   lang: 'lang',
+  quality: 'quality',
+  pauseAnimations: 'pause-animations',
   muted: 'muted',
   musicEnabled: 'music',
   musicVolume: 'music-volume',
@@ -35,6 +39,7 @@ export function restorePreferences(read, routeLength) {
       continue;
     }
     if (name === 'lang' && ['zh', 'en'].includes(value)) result[name] = value;
+    else if (name === 'quality' && ['high', 'low'].includes(value)) result.quality = value;
     else if (typeof defaults[name] === 'boolean' && typeof value === 'boolean')
       result[name] = value;
     else if (

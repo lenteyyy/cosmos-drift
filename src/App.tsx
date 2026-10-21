@@ -37,12 +37,15 @@ import {
 import { cabin } from './engine/audio';
 import { TRACKS } from './engine/music.mjs';
 import type { CosmicObject } from './types';
+import { usePageActive, claimPage } from './engine/page-activity';
 function useTelemetry() {
   const [, tick] = useState(0);
+  const foreground = usePageActive();
   useEffect(() => {
-    const i = setInterval(() => tick((x) => x + 1), 140);
+    if (!foreground) return;
+    const i = setInterval(() => tick((x) => x + 1), 250);
     return () => clearInterval(i);
-  }, []);
+  }, [foreground]);
 }
 function engage() {
   const s = useGame.getState();
@@ -301,8 +304,8 @@ function Modal() {
                 <h3>{zh ? '渲染质量' : 'Rendering quality'}</h3>
                 <p>
                   {zh
-                    ? '低画质减少背景粒子与像素密度。'
-                    : 'Low reduces particles and pixel density.'}
+                    ? '优先60 FPS；负载升高时自动降低分辨率。低画质减少粒子与背景开销。'
+                    : 'Prioritize 60 FPS with adaptive resolution. Low reduces particles and background cost.'}
                 </p>
               </div>
               <select
@@ -311,8 +314,27 @@ function Modal() {
                 onChange={(e) => s.set({ quality: e.target.value as 'high' | 'low' })}
               >
                 <option value="high">{zh ? '标准' : 'Standard'}</option>
-                <option value="low">{zh ? '节能' : 'Low power'}</option>
+                <option value="low">{zh ? '低画质 · 流畅优先' : 'Low · Performance'}</option>
               </select>
+            </div>
+            <div className="setting-row">
+              <div>
+                <h3>{zh ? '暂停背景动画' : 'Pause background animations'}</h3>
+                <p>
+                  {zh
+                    ? '冻结星云与装饰效果，仍可驾驶；静止时停止渲染。'
+                    : 'Freeze nebulae and decorative effects; flying remains available. Idle rendering stops.'}
+                </p>
+              </div>
+              <button
+                className="pill"
+                role="switch"
+                aria-label={zh ? '暂停背景动画' : 'Pause background animations'}
+                aria-checked={s.pauseAnimations}
+                onClick={() => s.set({ pauseAnimations: !s.pauseAnimations })}
+              >
+                {s.pauseAnimations ? (zh ? '已暂停' : 'Paused') : zh ? '播放中' : 'Playing'}
+              </button>
             </div>
             <div className="setting-row">
               <div>
@@ -750,6 +772,7 @@ function SpeedConsole() {
 export default function App() {
   const s = useGame(),
     zh = s.lang === 'zh';
+  const foreground = usePageActive();
   useTelemetry();
   useEffect(() => {
     s.load();
@@ -762,6 +785,14 @@ export default function App() {
     cosmicD = Math.hypot(p.x, p.y, p.z);
   return (
     <main
+      data-render-active={foreground}
+      data-render-frames={universe.renderFrames}
+      data-shader-frames={universe.shaderFrames}
+      data-shader-pixels={universe.shaderPixels}
+      data-background-paused={s.pauseAnimations}
+      data-fps={universe.fps}
+      data-adaptive-dpr={universe.adaptiveDpr}
+      data-effects-reduced={universe.effectsReduced}
       className={
         'app ' +
         (s.keyboardMode ? 'keyboard-mode ' : '') +
@@ -781,6 +812,11 @@ export default function App() {
         )}
       </div>
       <div className="vignette" />
+      {!foreground && (
+        <button className="standby-banner" onClick={claimPage}>
+          {zh ? '窗口已待机 · 点击继续' : 'Window on standby · Click to resume'}
+        </button>
+      )}
       <div className="screen-grain" />
       <header className="flight-topbar">
         <div className="flight-identity">

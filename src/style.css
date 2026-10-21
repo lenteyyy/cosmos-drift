@@ -2,6 +2,20 @@
 .app.keyboard-mode * {
   cursor: none !important;
 }
+.standby-banner {
+  position: absolute;
+  z-index: 100;
+  left: 50%;
+  top: 45%;
+  transform: translate(-50%, -50%);
+  padding: 18px 26px;
+  border: 1px solid #597883;
+  background: #07121eec;
+  color: #e1eeef;
+  border-radius: 12px;
+  font-size: 1rem;
+  white-space: nowrap;
+}
 .modal:focus,
 .universe:focus,
 .universe canvas:focus {

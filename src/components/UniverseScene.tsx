@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { memo, useEffect, useMemo, useRef } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as T from 'three';
 import { useGame, universe, type ScreenObject } from '../store';
@@ -37,6 +37,10 @@ import {
 } from '../engine/visuals';
 import { cabin } from '../engine/audio';
 import { starlight } from '../engine/starlight.mjs';
+import { createPaperBackground } from '../engine/paper-background';
+import { isPageActive, usePageActive } from '../engine/page-activity';
+import { renderBudget } from '../engine/render-policy.mjs';
+import { RenderController } from './RenderController';
 const sphereShared = new T.SphereGeometry(1, 48, 32),
   lowSphereShared = new T.SphereGeometry(1, 16, 10);
 const forward = new T.Vector3(),
@@ -70,6 +74,8 @@ function World() {
   const world = useMemo(() => {
     const root = new T.Group(),
       slots = Array.from({ length: 64 }, () => createSlot());
+    const paper = createPaperBackground();
+    root.add(paper.mesh);
     slots.forEach((s) => root.add(s.group));
     const objects = (catalog?.objects || []).filter(
       (o) => o.id !== 'horizon' && o.id !== 'cosmic-web',
@@ -174,39 +180,6 @@ function World() {
       }),
     );
     root.add(horizon);
-    const tunnel = new T.Mesh(
-      new T.SphereGeometry(18, 48, 32),
-      new T.ShaderMaterial({
-        side: T.BackSide,
-        transparent: true,
-        depthWrite: false,
-        depthTest: false,
-        uniforms: {
-          time: { value: 0 },
-          strength: { value: 0 },
-          dark: { value: 0 },
-          progress: { value: 0 },
-        },
-        vertexShader:
-          'varying vec3 v;void main(){v=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
-        fragmentShader: `varying vec3 v;uniform float time;uniform float strength;uniform float dark;uniform float progress;
-      void main(){vec3 d=normalize(v);vec2 uv=d.xy/max(.06,-d.z);float r=length(uv);float a=atan(uv.y,uv.x);
-      float z=1./max(.045,r);float twist=a+sin(z*.35-time*1.8)*.8+z*.12;
-      float waves=pow(.5+.5*sin(z*3.2-time*14.+sin(twist*4.)*.8),9.);
-      float threads=pow(.5+.5*sin(twist*47.+z*2.-time*5.),26.);
-      float dust=pow(.5+.5*sin(a*123.+z*39.-time*19.),45.);
-      vec3 nearColor=mix(vec3(.08,.4,.65),vec3(.85,.29,.06),dark);
-      vec3 farColor=mix(vec3(.4,.15,.8),vec3(.2,.15,.7),dark);
-      vec3 c=mix(nearColor,farColor,smoothstep(.2,.7,progress));
-      c=c*(waves*1.4+threads*.8+dust*.25)+vec3(.015,.025,.07);
-      float capture=(1.-smoothstep(.13,.3,progress))*dark;
-      float rim=exp(-pow((r-(.22+progress*1.7))/.045,2.));
-      c=mix(c,vec3(1.,.5,.16)*rim*2.,capture);
-      float opacity=strength*(.78+waves*.22);
-      gl_FragColor=vec4(c,clamp(opacity+capture*.5,0.,.98));}`,
-      }),
-    );
-    tunnel.renderOrder = 8;
     const portal = new T.Mesh(
       new T.TorusGeometry(3.2, 0.09, 12, 100),
       new T.MeshBasicMaterial({
@@ -216,7 +189,7 @@ function World() {
         depthWrite: false,
       }),
     );
-    root.add(tunnel, portal);
+    root.add(portal);
     const transitRings = new T.Group(),
       ringGeometry = new T.TorusGeometry(3, 0.018, 6, 96),
       ringMaterial = new T.MeshBasicMaterial({
@@ -235,6 +208,7 @@ function World() {
     root.add(transitRings);
     return {
       root,
+      paper,
       blackHoles: objects.filter((object) => object.category === 'black_hole'),
       slots,
       milky,
@@ -248,7 +222,6 @@ function World() {
       objects,
       positions,
       brightness,
-      tunnel,
       portal,
       transitRings,
       ringGeometry,
@@ -424,7 +397,10 @@ function World() {
       keys.current.clear();
       mouse.current = { x: 0, y: 0 };
       release();
-      useGame.getState().brake();
+      if (!useGame.getState().jumping) {
+        universe.brakeRequested = true;
+        useGame.getState().set({ throttle: 0, autopilot: false });
+      }
     };
     const leave = () => {
       universe.cursor.inside = false;
@@ -465,14 +441,13 @@ function World() {
   }, [camera, gl]);
   useEffect(
     () => () => {
+      world.paper.dispose();
       world.points.geometry.dispose();
       world.points.material.dispose();
       world.streaks.geometry.dispose();
       world.streaks.material.dispose();
       world.horizon.geometry.dispose();
       world.horizon.material.dispose();
-      world.tunnel.geometry.dispose();
-      world.tunnel.material.dispose();
       world.portal.geometry.dispose();
       world.portal.material.dispose();
       world.ringGeometry.dispose();
@@ -499,10 +474,11 @@ function World() {
     [world],
   );
   useFrame((_, frameDt) => {
-    if (!catalog || !universe.index) return;
+    if (!catalog || !universe.index || !isPageActive()) return;
     const dt = Math.min(frameDt, 0.05);
     let s = useGame.getState();
-    clock.current += dt;
+    if (!s.pauseAnimations && !s.paused && !s.panel) clock.current += Math.min(frameDt, 0.2);
+    universe.renderFrames++;
     const active = universe.jump?.mode === 'black_hole' || (!s.paused && !s.panel);
     const wasJumping = s.jumping;
     const previousPosition = active && !s.jumping ? structuredClone(universe.position) : null;
@@ -589,16 +565,19 @@ function World() {
         q.setFromAxisAngle(axis.set(0, 0, 1), rates.current.roll * dt);
         cmd.multiply(q).normalize();
         if (yaw || pitch || roll) universe.alignTarget = false;
-        if (held.has('KeyW') || held.has('KeyS'))
-          s.set({
-            playing: true,
-            autopilot: false,
-            throttle: T.MathUtils.clamp(
-              s.throttle + ((held.has('KeyW') ? 1 : 0) - (held.has('KeyS') ? 1 : 0)) * dt * 0.7,
-              -1,
-              1,
-            ),
-          });
+        if (held.has('KeyW') || held.has('KeyS')) {
+          const throttle = T.MathUtils.clamp(
+            s.throttle + ((held.has('KeyW') ? 1 : 0) - (held.has('KeyS') ? 1 : 0)) * dt * 0.7,
+            -1,
+            1,
+          );
+          if (throttle !== s.throttle || !s.playing || s.autopilot)
+            s.set({
+              playing: true,
+              autopilot: false,
+              throttle,
+            });
+        }
         const max = flightSpeedLimit(s.level, held.has('ShiftLeft') || held.has('ShiftRight'));
         if ((s.autopilot || universe.alignTarget) && target) {
           const r = relative(target.cartesian, universe.position);
@@ -883,7 +862,7 @@ function World() {
         Math.round((effects.count * world.maxParticles) / 900),
       ),
     );
-    if (active)
+    if (active && !s.pauseAnimations)
       particlePhase.current += (effects.rate + power * 300) * dt * (universe.speed < 0 ? -1 : 1);
     const positions = world.streaks.geometry.attributes.position as T.BufferAttribute;
     const streakLength = Math.max(effects.length, 1 + power * 55);
@@ -899,16 +878,10 @@ function World() {
     universe.particleCount = active ? particleCount : 0;
     universe.effectIntensity = active ? effects.intensity : 0;
     const portalTransit = universe.jump?.mode !== 'warp' && !!universe.jump;
-    world.tunnel.visible = portalTransit;
-    world.tunnel.quaternion.copy(o);
-    world.tunnel.material.uniforms.time.value = clock.current;
     const tunnelPower = portalTransit
       ? T.MathUtils.smoothstep(universe.jumpProgress, 0.06, 0.24) *
         (1 - T.MathUtils.smoothstep(universe.jumpProgress, 0.81, 1))
       : 0;
-    world.tunnel.material.uniforms.strength.value = tunnelPower;
-    world.tunnel.material.uniforms.progress.value = universe.jumpProgress;
-    world.tunnel.material.uniforms.dark.value = universe.jump?.mode === 'black_hole' ? 1 : 0;
     world.portal.visible = portalTransit && universe.jumpProgress < 0.75;
     world.portal.quaternion.copy(o);
     world.portal.position.copy(forward).multiplyScalar(12 - universe.jumpProgress * 14);
@@ -961,6 +934,27 @@ function World() {
       else cabin.enterAmbient(universe.band < 2 ? 'solar' : universe.band < 4 ? 'stellar' : 'deep');
     }
     animateMaterials(clock.current);
+    world.paper.update(
+      gl,
+      size.width,
+      size.height,
+      universe.effectsReduced ? 'low' : s.quality,
+      clock.current,
+      !!universe.jump,
+      universe.heading,
+    );
+    universe.shaderFrames = world.paper.frames;
+    universe.shaderPixels = world.paper.pixels;
+    universe.motionActive =
+      velocity.current.lengthSq() > 1e-50 ||
+      keys.current.size > 0 ||
+      Math.abs(rates.current.yaw) +
+        Math.abs(rates.current.pitch) +
+        Math.abs(rates.current.roll) +
+        Math.abs(rates.current.strafe) >
+        1e-4 ||
+      Math.abs(mouse.current.x) + Math.abs(mouse.current.y) > 1e-3 ||
+      cmd.angleTo(o) > 1e-4;
     fps.current.frames++;
     fps.current.time += frameDt;
     if (fps.current.time > 0.7) {
@@ -978,15 +972,17 @@ function World() {
     </>
   );
 }
-export function UniverseScene() {
+export const UniverseScene = memo(function UniverseScene() {
   const quality = useGame((s) => s.quality);
+  const foreground = usePageActive();
   return (
     <Canvas
       className="universe"
       tabIndex={0}
-      dpr={quality === 'high' ? [1, 1.65] : 1}
+      frameloop="never"
+      dpr={renderBudget(quality).dpr}
       camera={{ fov: 55, near: 0.015, far: 5000 }}
-      gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
+      gl={{ antialias: false, alpha: false, powerPreference: 'low-power' }}
       onCreated={({ gl }) => {
         gl.setClearColor('#060a12');
         gl.toneMapping = T.ACESFilmicToneMapping;
@@ -994,6 +990,7 @@ export function UniverseScene() {
       }}
     >
       <World />
+      <RenderController foreground={foreground} />
     </Canvas>
   );
-}
+});

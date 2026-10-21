@@ -24,6 +24,7 @@
     "release:check": "node scripts/check-release.mjs"
   },
   "dependencies": {
+    "@paper-design/shaders": "0.0.82",
     "@react-three/fiber": "^9.4.0",
     "lucide-react": "^0.468.0",
     "react": "^19.2.0",

@@ -57,9 +57,33 @@ class CabinAudio {
   private warpBus: GainNode | null = null;
   private warpSources: AudioScheduledSourceNode[] = [];
   private hoverAt = 0;
+  private backgroundSuspended = false;
+  private nextTrackAt = 0;
+  private scheduledNext = -1;
+  private scheduleNextTrack() {
+    if (this.nextTimer) clearTimeout(this.nextTimer);
+    this.nextTimer = null;
+    if (!this.ctx || this.backgroundSuspended || this.scheduledNext < 0) return;
+    this.nextTimer = setTimeout(
+      () => {
+        this.nextTimer = null;
+        void this.playTrack(this.scheduledNext);
+      },
+      Math.max(0, this.nextTrackAt - this.ctx.currentTime) * 1000,
+    );
+  }
+  setBackgroundSuspended(suspended: boolean) {
+    this.backgroundSuspended = suspended;
+    if (suspended) this.stopVoice();
+    if (this.ctx) void (suspended ? this.ctx.suspend() : this.ctx.resume()).catch(() => {});
+    this.scheduleNextTrack();
+  }
+  private changed() {
+    window.dispatchEvent(new Event('cosmos-audio-change'));
+  }
   start() {
     if (this.ctx) {
-      if (this.ctx.state === 'suspended') void this.ctx.resume();
+      if (this.ctx.state === 'suspended' && !this.backgroundSuspended) void this.ctx.resume();
       return;
     }
     this.ctx = new AudioContext();
@@ -110,7 +134,8 @@ class CabinAudio {
     this.driveNoise.gain.value = 0;
     noise.connect(this.noiseFilter).connect(this.driveNoise).connect(this.engine);
     noise.start();
-    void ctx.resume();
+    if (this.backgroundSuspended) void ctx.suspend();
+    else void ctx.resume();
     this.refreshVoice();
     if ('speechSynthesis' in window)
       speechSynthesis.addEventListener('voiceschanged', this.refreshVoice);
@@ -166,6 +191,7 @@ class CabinAudio {
       this.voiceStatus = this.voice ? this.voice.name : 'unavailable';
   };
   stopVoice() {
+    const wasSpeaking = this.speaking;
     ++this.voiceRevision;
     if ('speechSynthesis' in window) speechSynthesis.cancel();
     if (this.voiceSource) {
@@ -175,6 +201,7 @@ class CabinAudio {
       this.voiceSource = null;
     }
     this.speaking = false;
+    if (wasSpeaking) this.changed();
   }
   speak(
     cue: 'target' | 'warp' | 'arrive' | 'black_hole' | 'wormhole' | 'abort' | 'stabilize',
@@ -223,6 +250,7 @@ class CabinAudio {
         if (revision === this.voiceRevision) {
           this.speaking = false;
           this.voiceSource = null;
+          this.changed();
         }
       };
       source.start(this.ctx.currentTime + 0.1);
@@ -251,7 +279,10 @@ class CabinAudio {
     this.speaking = true;
     this.voiceAt = performance.now();
     utterance.onend = utterance.onerror = () => {
-      if (revision === this.voiceRevision) this.speaking = false;
+      if (revision === this.voiceRevision) {
+        this.speaking = false;
+        this.changed();
+      }
     };
     speechSynthesis.speak(utterance);
   }
@@ -279,6 +310,8 @@ class CabinAudio {
   }
   async playTrack(index: number) {
     if (this.nextTimer) clearTimeout(this.nextTimer);
+    this.nextTimer = null;
+    this.scheduledNext = -1;
     const revision = ++this.revision;
     this.trackStatus = 'loading';
     try {
@@ -298,6 +331,7 @@ class CabinAudio {
       this.trackGain = gain;
       this.trackIndex = index;
       this.trackStatus = 'playing';
+      this.changed();
       if (old && oldGain) {
         old.onended = () => {
           old.disconnect();
@@ -317,17 +351,17 @@ class CabinAudio {
         }
       };
       source.start();
-      this.nextTimer = setTimeout(
-        () => {
-          void this.playTrack((index + 1) % TRACKS.length);
-        },
-        Math.max(0, buffer.duration - 3) * 1000,
-      );
       const next = (index + 1) % TRACKS.length;
+      this.scheduledNext = next;
+      this.nextTrackAt = t + Math.max(0, buffer.duration - 3);
+      this.scheduleNextTrack();
       if (TRACKS[index].seconds <= 180 && TRACKS[next].seconds <= 180)
         void this.prepare(next).catch(() => {});
     } catch {
-      if (revision === this.revision) this.trackStatus = 'error';
+      if (revision === this.revision) {
+        this.trackStatus = 'error';
+        this.changed();
+      }
     }
   }
   nextTrack(direction = 1) {
